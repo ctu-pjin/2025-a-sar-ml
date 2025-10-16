@@ -36,13 +36,16 @@ def wrap(unwrapped):
     return phi
 
 
-
+def get_k(unwrapped):
+    k = np.round(unwrapped/(2*np.pi))
+    return k
 
 
 
 h = terrain()
 PHI = terrain2unwrap(h,wavelength=0.005)
 phi = wrap(PHI)
+k = get_k(PHI)
 
 plt.imshow(phi)
 x, y = np.meshgrid(np.arange(len(h)),np.arange(len(h)))
@@ -51,6 +54,8 @@ ax1.plot_surface(x,y,h, cmap="terrain",alpha=0.7)
 plt.axis('equal')
 fig2, ax2 = plt.subplots(subplot_kw={"projection": "3d"})
 ax2.plot_surface(x,y,PHI, cmap="terrain",alpha=0.7)
+fig3, ax3 = plt.subplots(subplot_kw={"projection": "3d"})
+ax3.plot_surface(x,y,k, cmap="terrain",alpha=0.7)
 plt.show()
 plt.close('all')
 
