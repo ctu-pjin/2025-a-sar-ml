@@ -3,6 +3,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from numpy.ma.core import arange
 
 
 def gaussian_surface(size=(256, 256), mean=(128, 128), variance=30.0, amplitude=10.0):
@@ -11,12 +12,30 @@ def gaussian_surface(size=(256, 256), mean=(128, 128), variance=30.0, amplitude=
     return g
 
 
-def terrain(size=(256, 256), peaks=(3, 5), x_mean=(25, 230), y_mean=(25, 230), variance=(30, 50), amplitude=(20, 80)):
+def incline_plane(image_size=(256,256),plane_size=(20,20),origin_position=(0,0),x_direction=0.,y_direction=0.,intercept=0.):
+    assert origin_position[0]+plane_size[0] <= image_size[0] and origin_position[1]+plane_size[1] <= image_size[1], "Plain is not completely within given image size."
+    p = np.zeros(image_size)
+    x = np.arange(plane_size[0])
+    y = np.arange(plane_size[1])
+    X, Y = np.meshgrid(x,y)
+    z = np.tan(x_direction)*X+np.tan(y_direction)*Y+intercept
+    p[origin_position[0]:origin_position[0]+plane_size[0],origin_position[1]:origin_position[1]+plane_size[1]] = np.transpose(z)
+    return p
+
+
+def terrain(size=(256,256),peaks=(3,5),x_mean=(25,230),y_mean=(25,230),variance=(30,50),amplitude=(20,80),plane=False):
     N = np.random.randint(peaks[0], peaks[1])
     h = np.zeros(size)
     for i in range(N):
         h += gaussian_surface(size, (np.random.randint(*x_mean), np.random.randint(*y_mean)), np.random.uniform(*variance), np.random.uniform(*amplitude))
     h += np.random.normal(0, 0.2, size)
+    if plane:
+        x_size = np.random.randint(10,75)
+        y_size = np.random.randint(10,75)
+        x_origin = np.random.randint(0,size[0]-x_size)
+        y_origin = np.random.randint(0,size[1]-y_size)
+        p = incline_plane(image_size=size,plane_size=(x_size,y_size),origin_position=(x_origin,y_origin),x_direction=np.random.uniform(-np.pi/6,np.pi/6),y_direction=np.random.uniform(-np.pi/6,np.pi/6),intercept=np.random.uniform(np.min(h),np.max(h)))
+        h = np.where(p!=0,p,h)
     return h
 
 
@@ -30,8 +49,8 @@ def wrap(unwrapped):
     B = 50
     DELTA = np.array([0,2*np.pi/3,4*np.pi/3])
     h, w = unwrapped.shape
-    noise = np.random.normal(scale=np.random.uniform(0.1,140),size=(h,w,3))
-    I = A + B * np.cos(unwrapped[:,:,None]-DELTA)+noise
+    n = np.random.normal(scale=np.random.uniform(0.1,140),size=(h,w,3))
+    I = A + B * np.cos(unwrapped[:,:,None]-DELTA)+n
     phi = np.arctan2(np.sum(I * np.sin(DELTA), axis=2), np.sum(I * np.cos(DELTA), axis=2))
     return phi
 
@@ -42,11 +61,11 @@ def get_k(unwrapped):
 
 
 
-h = terrain()
+h = terrain(plane=True)
 PHI = terrain2unwrap(h,wavelength=0.005)
 phi = wrap(PHI)
 k = get_k(PHI)
-
+print(np.min(PHI))
 plt.imshow(phi)
 x, y = np.meshgrid(np.arange(len(h)),np.arange(len(h)))
 fig1, ax1 = plt.subplots(subplot_kw={"projection": "3d"})
