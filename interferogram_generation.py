@@ -3,6 +3,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from skimage.transform import resize
 from numpy.ma.core import arange
 
 
@@ -41,8 +42,15 @@ def terrain(size=(256,256),peaks=(3,5),x_mean=(25,230),y_mean=(25,230),variance=
     return h
 
 
-def terrain2unwrap(surface=np.array(0),wavelength=0.055,baseline=100,r=500000,theta=20*math.pi/180):
-    phi = 4*np.pi/wavelength*baseline/(r*np.sin(theta))*surface
+def terrain2unwrap(surface=np.array(0),wavelength=0.055,baseline=100,r=500000,theta=20*math.pi/180,pixel_size=30,dem_resolution=1):
+    if pixel_size>dem_resolution:
+        scale_factor = dem_resolution/pixel_size
+        new_shape = (int(surface.shape[0]*scale_factor),int(surface.shape[1]*scale_factor))
+        surface_ds = resize(surface,new_shape,anti_aliasing=True)
+    else:
+        print("Can't upsample image.")
+        return
+    phi = 4*np.pi/wavelength*baseline/(r*np.sin(theta))*surface_ds
     return phi
 
 
