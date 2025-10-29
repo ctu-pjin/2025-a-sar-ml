@@ -6,9 +6,11 @@ import math
 from numpy.ma.core import arange
 
 
-def gaussian_surface(size=(256, 256), mean=(128, 128), variance=30.0, amplitude=10.0):
+def gaussian_surface(size=(256, 256), mean=(128, 128), variance=30.0, amplitude=10.0, negative=False):
     X, Y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))
     g = amplitude * np.exp(-((X - mean[0])**2 + (Y - mean[1])**2) / (2 * variance**2))
+    if negative:
+        g =-g
     return g
 
 
@@ -60,12 +62,18 @@ def get_k(unwrapped):
     return k
 
 
+# def generate_set():
 
-h = terrain(plane=True)
-PHI = terrain2unwrap(h,wavelength=0.005)
+
+
+
+
+h = terrain(size=(1028,1028),peaks=(15,40),x_mean=(25,1003),y_mean=(25,1003),variance=(120,200),amplitude=(80,320),plane=False)
+PHI = terrain2unwrap(h)
 phi = wrap(PHI)
 k = get_k(PHI)
 print(np.min(PHI))
+print(k)
 plt.imshow(phi)
 x, y = np.meshgrid(np.arange(len(h)),np.arange(len(h)))
 fig1, ax1 = plt.subplots(subplot_kw={"projection": "3d"})
@@ -75,6 +83,13 @@ fig2, ax2 = plt.subplots(subplot_kw={"projection": "3d"})
 ax2.plot_surface(x,y,PHI, cmap="terrain",alpha=0.7)
 fig3, ax3 = plt.subplots(subplot_kw={"projection": "3d"})
 ax3.plot_surface(x,y,k, cmap="terrain",alpha=0.7)
+fig4, ax4 = plt.subplots(subplot_kw={"projection": "3d"})
+ax4.plot_surface(x, y, phi, cmap="terrain", alpha=0.7)
+g = -gaussian_surface()
+x, y = np.meshgrid(np.arange(len(g)),np.arange(len(g)))
+fig5, ax5 = plt.subplots(subplot_kw={"projection": "3d"})
+ax5.plot_surface(x, y, g, cmap="terrain", alpha=0.7)
 plt.show()
 plt.close('all')
+
 
