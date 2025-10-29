@@ -29,7 +29,7 @@ def terrain(size=(256,256),peaks=(3,5),x_mean=(25,230),y_mean=(25,230),variance=
     N = np.random.randint(peaks[0], peaks[1])
     h = np.zeros(size)
     for i in range(N):
-        h += gaussian_surface(size, (np.random.randint(*x_mean), np.random.randint(*y_mean)), np.random.uniform(*variance), np.random.uniform(*amplitude))
+        h += gaussian_surface(size, (np.random.randint(*x_mean),np.random.randint(*y_mean)),np.random.uniform(*variance),np.random.uniform(*amplitude),random.getrandbits(1))
     h += np.random.normal(0, 0.2, size)
     if plane:
         x_size = np.random.randint(10,75)
@@ -62,19 +62,21 @@ def get_k(unwrapped):
     return k
 
 
-# def generate_set():
+# def generate_set(pixel_size,image_size):
+#
+#     h = terrain()
 
 
 
 
 
-h = terrain(size=(1028,1028),peaks=(15,40),x_mean=(25,1003),y_mean=(25,1003),variance=(120,200),amplitude=(80,320),plane=False)
+h = terrain(size=(1028,1028),peaks=(15,40),x_mean=(25,1003),y_mean=(25,1003),variance=(20,100),amplitude=(20,150),plane=False)
 PHI = terrain2unwrap(h)
 phi = wrap(PHI)
 k = get_k(PHI)
 print(np.min(PHI))
 print(k)
-plt.imshow(phi)
+plt.imshow(phi,cmap='gray')
 x, y = np.meshgrid(np.arange(len(h)),np.arange(len(h)))
 fig1, ax1 = plt.subplots(subplot_kw={"projection": "3d"})
 ax1.plot_surface(x,y,h, cmap="terrain",alpha=0.7)
