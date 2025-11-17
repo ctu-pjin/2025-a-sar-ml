@@ -48,9 +48,7 @@ def terrain(size=(256,256), pixel_size=(1.0,1.0), peaks=(3,5), variance_scale=(3
     h = np.zeros(size)
     for i in range(N):
         A = np.random.exponential(scale=1.0) * amplitude_scale
-        print(amplitude_scale/A)
         sigma = np.random.exponential(scale=5*amplitude_scale/A)*variance_scale
-        print(sigma)
         x0 = np.random.randint(0, size[1])
         y0 = np.random.randint(0, size[0])
         h += gaussian_surface_faster(size, pixel_size, (x0,y0), sigma, A, random.getrandbits(1))
@@ -79,7 +77,16 @@ def wrap(unwrapped):
     n = np.random.normal(scale=np.random.uniform(0.1, 140), size=(h, w, 3))
     I = A + B * np.cos(unwrapped[:, :, None] - DELTA) + n
     phi = np.arctan2(np.sum(I * np.sin(DELTA), axis=2), np.sum(I * np.cos(DELTA), axis=2))
+    noise = 0.3
+    phi += np.random.normal(0, noise, phi.shape)
     return phi
+
+# def wrap(unwrapped, noise_std=1):
+#     phi = (unwrapped + np.pi) % (2*np.pi) - np.pi
+#     h, w = unwrapped.shape
+#     if noise_std > 0:
+#         phi += np.random.normal(scale=np.random.uniform(0.1, 2), size=(h, w))
+#     return phi
 
 def get_k(unwrapped):
     k = np.round(unwrapped / (2 * np.pi))
@@ -94,7 +101,7 @@ def get_peaks_range(area_width, area_height):
 
 def generate_set(area_width=2304, area_height=7183.36, set_size=1, range_res=4.5, azimuth_res=14.03):
     results = []
-    image_size = ( int(area_height / azimuth_res), int(area_width / range_res))
+    image_size = (int(area_height / azimuth_res), int(area_width / range_res))
     pixel_size_x = range_res
     pixel_size_y = azimuth_res
     peaks = get_peaks_range(area_width, area_height)
@@ -116,7 +123,7 @@ def generate_set(area_width=2304, area_height=7183.36, set_size=1, range_res=4.5
 
 
 
-results = generate_set(area_width=2304, area_height=7183.36, set_size=1, range_res=4.5, azimuth_res=14.03)
+results = generate_set(area_width=25000, area_height=25000, set_size=1, range_res=4.5, azimuth_res=14.03)
 h = results[0][0]
 PHI = results[0][1]
 phi = results[0][2]
@@ -132,4 +139,4 @@ fig1, ax1 = plt.subplots(subplot_kw={"projection": "3d"})
 ax1.plot_surface(x_1,y_1,h[0,0,:,:].cpu(), cmap="terrain",alpha=0.7)
 plt.show()
 
-plt.close('all')
+    # plt.close('all')
