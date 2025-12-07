@@ -139,4 +139,4 @@ fig1, ax1 = plt.subplots(subplot_kw={"projection": "3d"})
 ax1.plot_surface(x_1,y_1,h[0,0,:,:].cpu(), cmap="terrain",alpha=0.7)
 plt.show()
 
-    # plt.close('all')
+plt.close('all')
