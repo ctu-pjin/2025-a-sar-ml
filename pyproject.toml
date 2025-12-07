@@ -3,7 +3,7 @@ name = "ml-pytorch-detectron"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Petr Pokorný",email = "petr.pokorny@bighub.cz"}
+    {name = "Jan Buriánek",email = "honza.burianek@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.10,<3.13"

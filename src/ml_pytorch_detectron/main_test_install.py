@@ -40,3 +40,4 @@ if __name__ == "__main__":
     print("\nTesting Detectron2 installation...")
     test_detectron2()
     print("\n🎉 All checks passed!")
+
