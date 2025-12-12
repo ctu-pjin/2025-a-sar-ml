@@ -7,7 +7,6 @@ import scipy.ndimage as ndimage
 import random
 import geopandas as gpd
 from rasterio import features
-from owslib.wfs import WebFeatureService
 import pickle
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -50,7 +49,7 @@ def terrain2unwrap(surface, wavelength=0.05546576, baseline=123.613815, r=832143
     return phi
 
 
-def wrap(unwrapped, noise_std=1):
+def wrap(unwrapped):
     unwrapped_np = unwrapped.cpu().numpy()
     phi = (unwrapped_np + np.pi) % (2*np.pi) - np.pi
     return torch.from_numpy(phi).to(unwrapped.device)
@@ -144,19 +143,17 @@ with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata'
 h = torch.load("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp",map_location=device)
 PHI = terrain2unwrap(h[0:100,:,:,:],wavelength=0.05546576,baseline=129.18913269,r=846227.9829539005+26725/2*2.329562,theta=38.87931758)
 print(PHI.shape)
+phi = wrap(PHI)
+print(phi.shape)
 dir = r"D:/Dokumenty/Dokumenty/Skola/CVUT/ml-unwrapping/data50/shp"
-PHI_noised = landcover_noise(PHI, metadata, dir, sigma_buildings=1,sigma_vegetation=1,sigma_water=1)
-# PHI_noised = baseline_slope_noise(PHI,h,13.9,129.18913269,7.495)
-# phi = wrap(PHI,noise_std=0)
-# print(phi.shape)
-phi_noised = wrap(PHI_noised)
+phi_noised = landcover_noise(phi, metadata, dir, sigma_buildings=1,sigma_vegetation=1,sigma_water=1)
 print(phi_noised.shape)
 
 
 
 
 tensor2tiffs("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised",phi_noised,metadata)
-tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_noised",PHI_noised,metadata)
+tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_noised",PHI,metadata)
 
 
 
