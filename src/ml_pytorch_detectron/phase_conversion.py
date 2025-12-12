@@ -3,8 +3,15 @@ import os
 import torch
 import rasterio
 import matplotlib.pyplot as plt
+import scipy.ndimage as ndimage
+import random
+import geopandas as gpd
+from rasterio import features
+from owslib.wfs import WebFeatureService
+import pickle
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
 def tiffs2tensor(folder_path):
     tensor_list = []
@@ -23,8 +30,8 @@ def tiffs2tensor(folder_path):
     tensor_stack = tensor_stack.unsqueeze(1)
     return tensor_stack, metadata_list
 
-def tensor2tiffs(output_folder, tensor_stack, metadata_list):
 
+def tensor2tiffs(output_folder, tensor_stack, metadata_list):
     os.makedirs(output_folder, exist_ok=True)
 
     for i, (tensor, meta) in enumerate(zip(tensor_stack, metadata_list)):
@@ -42,36 +49,114 @@ def terrain2unwrap(surface, wavelength=0.05546576, baseline=123.613815, r=832143
     phi = 4 * np.pi / wavelength * baseline / (r *np.sin(np.deg2rad(theta)))*surface
     return phi
 
+
 def wrap(unwrapped, noise_std=1):
-    phi = (unwrapped + np.pi) % (2*np.pi) - np.pi
-    if noise_std > 0:
-        phi += np.random.normal(scale=np.random.uniform(0.1, 2), size=(unwrapped.shape[2], unwrapped.shape[3]))
-    return phi
+    unwrapped_np = unwrapped.cpu().numpy()
+    phi = (unwrapped_np + np.pi) % (2*np.pi) - np.pi
+    return torch.from_numpy(phi).to(unwrapped.device)
+
+
+def load_layer(path, target_crs):
+    gdf = gpd.read_file(path)
+    geom_cols = [col for col in gdf.columns if gdf[col].dtype.name == "geometry"]
+    gdf = gdf.set_geometry(geom_cols[0])
+    gdf = gdf[gdf.geometry.notnull()]
+    gdf = gdf.to_crs(target_crs)
+    return gdf
+
+
+def landcover_noise(tensor,metadata,dir,sigma_buildings=0.3,sigma_vegetation=0.2,sigma_water=0.1):
+    SHP = {"build1": f"{dir}/BlokBudov.shp",
+           "build2": f"{dir}/ChatovaKolonie.shp",
+        "veg1": f"{dir}/Les.shp",
+        "veg2": f"{dir}/ZahradaSadParkViniceChmelnice.shp",
+        "water": f"{dir}/VodniPlocha.shp"}
+    tensor_noised = tensor.clone()
+    gdfs = {}
+
+    for key, path in SHP.items():
+        gdfs[key] = load_layer(path, metadata[0]["crs"])
+
+    for i in range(tensor.shape[0]):
+        transform = metadata[i]["transform"]
+        xmin = transform[2]
+        ymax = transform[5]
+        xmax = xmin+transform[0]*tensor.shape[3]
+        ymin = ymax+transform[4]*tensor.shape[2]
+        out = tensor[i, 0].cpu().numpy().copy()
+
+        building_mask = np.zeros((tensor.shape[2],tensor.shape[3]),dtype=np.uint8)
+        for k in ["build1", "build2"]:
+            gdf = gdfs.get(k)
+            gdf_clip = gdf.cx[xmin:xmax, ymin:ymax]
+            if gdf_clip.empty:
+                continue
+
+            building_mask = np.maximum(building_mask,features.rasterize([(geom, 1) for geom in gdf_clip.geometry],out_shape=(tensor.shape[2], tensor.shape[3]),transform=transform,fill=0,dtype=np.uint8))
+
+        if np.any(building_mask):
+            noise = np.random.normal(scale=sigma_buildings, size=(tensor.shape[2], tensor.shape[3]))
+            out[building_mask==1] += noise[building_mask==1]
+
+
+        veg_mask = np.zeros((tensor.shape[2], tensor.shape[3]),dtype=np.uint8)
+        for k in ["veg1","veg2"]:
+            gdf = gdfs.get(k)
+            gdf_clip = gdf.cx[xmin:xmax, ymin:ymax]
+            if gdf_clip.empty:
+                continue
+
+            veg_mask = np.maximum(veg_mask,features.rasterize([(geom, 1) for geom in gdf_clip.geometry],out_shape=(tensor.shape[2], tensor.shape[3]),transform=transform,fill=0,dtype=np.uint8))
+
+        if np.any(veg_mask):
+            noise = np.random.normal(scale=sigma_vegetation, size=(tensor.shape[2], tensor.shape[3]))
+            out[veg_mask==1] += noise[veg_mask==1]
+
+
+        water_mask = np.zeros((tensor.shape[2], tensor.shape[3]), dtype=np.uint8)
+        gdf_water = gdfs.get("water")
+        gdf_clip = gdf_water.cx[xmin:xmax, ymin:ymax]
+        if not gdf_clip.empty:
+            water_mask = np.maximum(water_mask,features.rasterize([(geom, 1) for geom in gdf_clip.geometry],out_shape=(tensor.shape[2], tensor.shape[3]),transform=transform,fill=0,dtype=np.uint8))
+
+        if np.any(water_mask):
+            noise = np.random.normal(scale=sigma_water, size=(tensor.shape[2], tensor.shape[3]))
+            out[water_mask==1] += noise[water_mask==1]
+
+        tensor_noised[i, 0] = torch.from_numpy(out).to(tensor.device)
+
+    return tensor_noised
 
 
 
 
-h, metadata = tiffs2tensor("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3")
-print(h.shape)
-PHI = terrain2unwrap(h,wavelength=0.05546576,baseline=129.18913269,r=846227.9829539005+26725/2*2.329562,theta=38.87931758)
-print(PHI.shape[1:-1])
-phi = wrap(PHI,noise_std=0)
-print(phi.shape)
 
 
 
-plt.figure(figsize=(15, 12))
-for i in range(10):
-    plt.subplot(2, 5, i + 1)
-    if i <5:
-        plt.imshow(PHI[i, 0].cpu().numpy(), cmap='viridis')
-    else:
-        plt.imshow(phi[i-5, 0].cpu().numpy(), cmap='viridis')
-    plt.axis('off')
 
-plt.tight_layout()
-plt.show()
+# h, metadata = tiffs2tensor("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3")
+# print(h.shape)
+# torch.save(h, "D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp")
+# with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata', 'wb') as f:
+#     pickle.dump(metadata, f)
+with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata', 'rb') as f:
+    metadata = pickle.load(f)
+h = torch.load("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp",map_location=device)
+PHI = terrain2unwrap(h[0:100,:,:,:],wavelength=0.05546576,baseline=129.18913269,r=846227.9829539005+26725/2*2.329562,theta=38.87931758)
+print(PHI.shape)
+dir = r"D:/Dokumenty/Dokumenty/Skola/CVUT/ml-unwrapping/data50/shp"
+PHI_noised = landcover_noise(PHI, metadata, dir, sigma_buildings=1,sigma_vegetation=1,sigma_water=1)
+# PHI_noised = baseline_slope_noise(PHI,h,13.9,129.18913269,7.495)
+# phi = wrap(PHI,noise_std=0)
+# print(phi.shape)
+phi_noised = wrap(PHI_noised)
+print(phi_noised.shape)
 
-tensor2tiffs("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_3",phi,metadata)
-tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_3",PHI,metadata)
+
+
+
+tensor2tiffs("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised",phi_noised,metadata)
+tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_noised",PHI_noised,metadata)
+
+
 
