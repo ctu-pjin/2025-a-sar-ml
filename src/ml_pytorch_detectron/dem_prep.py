@@ -5,14 +5,11 @@ import os
 
 def dem_grid(origin,grid_width,grid_height,pix_num,pixel_size,path):
     sampling = int(pix_num * pixel_size)
-
     x, y = np.meshgrid( np.arange(0, grid_width) * sampling, np.arange(0, grid_height) * sampling )
-
     X = x + origin[0]
     Y = y + origin[1]
 
     grid = np.column_stack([X.ravel(), Y.ravel()])
-
 
     url = "https://ags.cuzk.cz/arcgis2/rest/services/dmp1g/ImageServer/exportImage"
 
@@ -22,12 +19,10 @@ def dem_grid(origin,grid_width,grid_height,pix_num,pixel_size,path):
             continue
 
         name += 1
-
         x_min = grid[i, 0]
         y_min = grid[i, 1]
         x_max = grid[i + grid_width + 1, 0]
         y_max = grid[i + grid_width + 1, 1]
-
         bbox = f"{x_min},{y_min},{x_max},{y_max}"
 
         params = {
@@ -43,25 +38,20 @@ def dem_grid(origin,grid_width,grid_height,pix_num,pixel_size,path):
         }
 
         resp = requests.get(url, params=params)
-
         out_path = path+f"\dem{name}.tiff"
         with open(out_path, "wb") as f:
             f.write(resp.content)
 
 
-
 def mask_empty(folder_path, delete_empty=True):
-
     for filename in os.listdir(folder_path):
         if not filename.lower().endswith(('.tif', '.tiff')):
             continue
 
         file_path = os.path.join(folder_path, filename)
-
         with rasterio.open(file_path) as src:
             arr = src.read(1)
             nodata = src.nodata if src.nodata is not None else 0
-
 
         mask_empty = arr == nodata
         if delete_empty and np.all(mask_empty):
@@ -69,17 +59,10 @@ def mask_empty(folder_path, delete_empty=True):
             continue
 
         arr_masked = np.where(arr == nodata, nodata, arr)
-
         meta = src.meta.copy()
         meta.update({"dtype": "float32","nodata": nodata,"count": 1})
-
         with rasterio.open(file_path, "w", **meta) as dst:
             dst.write(arr_masked.astype(np.float32), 1)
-
-
-
-
-
 
 
 
