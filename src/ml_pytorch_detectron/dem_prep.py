@@ -66,5 +66,5 @@ def mask_empty(folder_path, delete_empty=True):
 
 
 
-# dem_grid((299368.000,5377500.000),72,46,512,13.9,"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3")
+# dem_grid((291000.000,5377500.000),72,46,512,13.9,"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3")
 mask_empty("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3")
