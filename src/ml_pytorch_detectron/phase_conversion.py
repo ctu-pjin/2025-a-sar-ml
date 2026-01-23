@@ -64,7 +64,7 @@ def wrap(unwrapped):
 
 
 def get_k(unwrapped):
-    k = np.round(unwrapped / (2 * np.pi))
+    k = torch.round(unwrapped/(2*torch.pi)).int()
     return k
 
 
@@ -315,11 +315,11 @@ def phase_noise(tensor, metadata, dem_tensor, zabaged_dir, t_days=17.9992, B_per
     return tensor_out, sigma_phi2
 
 
-# h, metadata = tiffs2tensor("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3")
-# print(h.shape)
-# torch.save(h, "D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp")
-# with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata', 'wb') as f:
-#     pickle.dump(metadata, f)
+h, metadata = tiffs2tensor("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3")
+print(h.shape)
+torch.save(h, "D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp")
+with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata', 'wb') as f:
+    pickle.dump(metadata, f)
 with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata', 'rb') as f:
     metadata = pickle.load(f)
 h = torch.load("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp",map_location=device)
@@ -344,4 +344,4 @@ tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_3
 tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\k",k,metadata)
 tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_3",phi,metadata)
 tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised_2",phi_noised,metadata)
-tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\variances",variances,metadata
+tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\variances",variances,metadata)
