@@ -9,9 +9,7 @@ import geopandas as gpd
 from numpy.ma.core import angle
 from rasterio import features
 import pickle
-
 from skimage.morphology import area_closing
-
 from scipy.special import spence
 from shapely.geometry import shape
 from pyproj import Transformer, CRS
@@ -315,33 +313,69 @@ def phase_noise(tensor, metadata, dem_tensor, zabaged_dir, t_days=17.9992, B_per
     return tensor_out, sigma_phi2
 
 
-h, metadata = tiffs2tensor("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3")
-print(h.shape)
-torch.save(h, "D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp")
-with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata', 'wb') as f:
-    pickle.dump(metadata, f)
+# h, metadata = tiffs2tensor("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3")
+# print(h.shape)
+# torch.save(h, "D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp")
+# with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata', 'wb') as f:
+#     pickle.dump(metadata, f)
+# with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata', 'rb') as f:
+#     metadata = pickle.load(f)
+# h = torch.load("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp",map_location=device)
+# PHI = terrain2unwrap(h[:,:,:,:],wavelength=0.05546576,baseline=129.18913269,r=846227.9829539005+26725/2*2.329562,theta=38.87931758)
+# print(PHI.shape)
+# torch.save(PHI, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_3\unwrapped")
+# k = get_k(PHI)
+# torch.save(k, "D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\k\k")
+# phi = wrap(PHI)
+# torch.save(phi, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_3\wrapped")
+# dir = r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\ZABAGED-3045-gpkg-20251222\ZABAGED_RESULTS.gpkg"
+# PHI_noised, variances = phase_noise(PHI, metadata, h, dir,17.9992, 123.613815, 33.87253381, 349.740906,"right",0.05546576, 832143.9479681)
+# torch.save(PHI_noised, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_noised\unwrapped_noised")
+# torch.save(variances, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\variances\variances")
+# phi_noised = wrap(PHI_noised)
+# print(phi_noised.shape)
+# torch.save(phi_noised, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised_2\wrapped_noised")
+#
+#
+#
+# tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_3",PHI,metadata)
+# tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\k",k,metadata)
+# tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_3",phi,metadata)
+# tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised_2",phi_noised,metadata)
+# tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\variances",variances,metadata)
+
+
+def remove_boundary_images(tensor,metadata,gdb_path):
+    device = tensor.device
+    gdf_cz = gpd.read_file(gdb_path,layer="Stat")
+    keep = []
+    for i in range(tensor.shape[0]):
+        meta = metadata[i]
+        transform = meta["transform"]
+        crs = meta["crs"]
+        H, W = tensor.shape[2:]
+        if gdf_cz.crs != crs:
+            gdf_cz = gdf_cz.to_crs(crs)
+
+        cz_mask = features.rasterize([(geom, 1) for geom in gdf_cz.geometry],out_shape=(H, W),transform=transform,fill=0,dtype="uint8")
+        if torch.all(torch.from_numpy(cz_mask).to(device)==1):
+            keep.append(i)
+
+    keep = torch.tensor(keep, device=device)
+    return tensor[keep], [metadata[i] for i in keep.tolist()]
+
+
+
+
 with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata', 'rb') as f:
     metadata = pickle.load(f)
-h = torch.load("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\dmp",map_location=device)
-PHI = terrain2unwrap(h[:,:,:,:],wavelength=0.05546576,baseline=129.18913269,r=846227.9829539005+26725/2*2.329562,theta=38.87931758)
-print(PHI.shape)
-torch.save(PHI, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_3\unwrapped")
-k = get_k(PHI)
-torch.save(k, "D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\k\k")
-phi = wrap(PHI)
-torch.save(phi, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_3\wrapped")
-dir = r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\ZABAGED-3045-gpkg-20251222\ZABAGED_RESULTS.gpkg"
-PHI_noised, variances = phase_noise(PHI, metadata, h, dir,17.9992, 123.613815, 33.87253381, 349.740906,"right",0.05546576, 832143.9479681)
-torch.save(PHI_noised, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_noised\unwrapped_noised")
-torch.save(variances, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\variances\variances")
-phi_noised = wrap(PHI_noised)
-print(phi_noised.shape)
-torch.save(phi_noised, r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised_2\wrapped_noised")
-
-
-
-tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\unwrapped_3",PHI,metadata)
-tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\k",k,metadata)
-tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_3",phi,metadata)
-tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised_2",phi_noised,metadata)
-tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\variances",variances,metadata)
+phi_noised = torch.load("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised_2\wrapped_noised",map_location=device)
+k = torch.load("D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\k\k",map_location=device)
+phi_noised_clipped, metadata_clipped = remove_boundary_images(phi_noised,metadata,gdb_path=r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\arccr_4_3\arccr_4_3.gdb")
+k_clipped, _ = remove_boundary_images(k,metadata,gdb_path=r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\arccr_4_3\arccr_4_3.gdb")
+torch.save(phi_noised_clipped,r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised_clipped\wrapped_noised_clipped")
+torch.save(k_clipped,r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\k_clipped\k_clipped")
+with open('D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\dmp_3\metadata_clipped', 'wb') as f:
+    pickle.dump(metadata_clipped, f)
+tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\wrapped_noised_clipped",phi_noised_clipped,metadata_clipped)
+tensor2tiffs(r"D:\Dokumenty\Dokumenty\Skola\CVUT\ml-unwrapping\dmp1g\k_clipped",k_clipped,metadata_clipped)
